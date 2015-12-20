@@ -34,7 +34,7 @@ public class MainFrame extends JFrame {
     private DefaultListModel listModel = new DefaultListModel();
     private ArrayList<Files.Metadata> entries;
     static final String clientId = "0.1";
-    static final String pathToAuthTokens = "C:\\Users\\T1000\\IdeaProjects\\UnionCloud2\\src\\main\\java\\com\\jcs\\tokens.txt";
+    static final String pathToAuthTokens = "JCS\\src\\main\\java\\com\\jcs\\tokens.txt";
     MainFrame(String title) throws DbxException, IOException, JsonReader.FileLoadException {
 
         FileReader r = new FileReader(pathToAuthTokens);

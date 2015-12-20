@@ -20,8 +20,8 @@ public class AuthForm extends  JFrame{
     static final String clientId = "0.1";
     static final String APP_KEY = "sesmmbymgegew78";
     static final String APP_SECRET = "jl1tqg9yliktnbb";
-    static final String pathToAuthCodes = "C:\\Users\\Anderson\\IdeaProjects\\UnionCloud\\src\\main\\java\\com\\jcs\\authcodes.txt";
-    static final String pathToAuthTokens = "C:\\Users\\Anderson\\IdeaProjects\\UnionCloud\\src\\main\\java\\com\\jcs\\tokens.txt";
+    static final String pathToAuthCodes = "JCS\\src\\main\\java\\com\\jcs\\authcodes.txt";
+    static final String pathToAuthTokens = "JCS\\src\\main\\java\\com\\jcs\\tokens.txt";
 
     private MainFrame mainform;
     private JButton buttonAuth;
