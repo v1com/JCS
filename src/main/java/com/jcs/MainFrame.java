@@ -34,16 +34,11 @@ public class MainFrame extends JFrame {
     private DefaultListModel listModel = new DefaultListModel();
     private ArrayList<Files.Metadata> entries;
     static final String clientId = "0.1";
-<<<<<<< HEAD
+
     static String pathToAuthTokens;
     String dir = "";
     MainFrame(String title) throws DbxException, IOException, JsonReader.FileLoadException {
         pathToAuthTokens = new File(".").getCanonicalPath() + "\\src\\main\\java\\com\\jcs\\tokens.txt";
-=======
-    static final String pathToAuthTokens = "JCS\\src\\main\\java\\com\\jcs\\tokens.txt";
-    MainFrame(String title) throws DbxException, IOException, JsonReader.FileLoadException {
-
->>>>>>> origin/master
         FileReader r = new FileReader(pathToAuthTokens);
 
         BufferedReader b = new BufferedReader(r);
