@@ -24,23 +24,32 @@ public class MainFrame extends JFrame {
     private JTextField btnNameField;
     private String createFolderName;
     private JButton addFolderBtn;
+    private JButton uploadFileBtn;
+    private JButton downloadFileBtn;
     private Panels LeftPanel;
     private Panels RightPanel;
     private JList accountList;
     private JList folderList;
     private String currentPath = "";
+    private int li = -1;
     private String path;
     DbxClientV2 client;
     private DefaultListModel listModel = new DefaultListModel();
     private ArrayList<Files.Metadata> entries;
     static final String clientId = "0.1";
-
     static String pathToAuthTokens;
+    boolean acceptDonwload = false;
+    String fileDir = "";
+    String projectPath;
+    String adp;
+    String additionalPath;
     String dir = "";
     MainFrame(String title) throws DbxException, IOException, JsonReader.FileLoadException {
-        pathToAuthTokens = new File(".").getCanonicalPath() + "\\src\\main\\java\\com\\jcs\\tokens.txt";
+        projectPath = new File(".").getCanonicalPath();
+        adp = "\\src\\main\\java\\com\\jcs";
+        additionalPath = "\\src\\main\\java\\com\\jcs\\tokens.txt";
+        pathToAuthTokens = projectPath + additionalPath;
         FileReader r = new FileReader(pathToAuthTokens);
-
         BufferedReader b = new BufferedReader(r);
         String token = b.readLine();
         if (token == null) {
@@ -49,11 +58,9 @@ public class MainFrame extends JFrame {
             DbxRequestConfig config = new DbxRequestConfig(clientId, Locale.getDefault().toString());
             client = new DbxClientV2(config, token);
 
-           // OutputStream outStream = new FileOutputStream("dd"); - загрузка с дропбокса
-           // client.files.downloadBuilder("lol").run(outStream);
 
-            //InputStream inputStream = new FileInputStream("gg"); - загрузка на дропбокс
-            // client.files.uploadBuilder("gg").run(inputStream);
+
+
 
             //client.files.delete("path"); удаление файлов
 
@@ -78,7 +85,20 @@ public class MainFrame extends JFrame {
             RightPanel.setLayout(new GridBagLayout());
 
 
+
+
             getUpdateFolders();
+
+            dir = "/kill me";
+            // Скачивание файла из дропбокс
+           // OutputStream outStream = new FileOutputStream(new File(projectPath + adp + "/out.txt"));  // загрузка с дропбокса
+            //client.files.downloadBuilder(dir + "/gg.txt").run(outStream);
+            // dir + "/gg.txt" - откуда скачивать, или куда закачивать
+            // Загрузка файлв в дропбокс
+            /*
+            InputStream inputStream = new FileInputStream(new File(projectPath + adp + "/gg.txt"));
+            client.files.uploadBuilder(dir+"/gg.txt").run(inputStream);
+            */
 
             folderList = new JList(listModel);
             //listModel.add(0,"...");
@@ -87,7 +107,9 @@ public class MainFrame extends JFrame {
                 public void mouseClicked(MouseEvent e) {
                     super.mouseClicked(e);
                     JList list = (JList) e.getSource();
-
+                  ///*
+                    //*/
+                    acceptDonwload = false;
                     if (e.getClickCount() == 2) {
                         // Double-click detected
                         int index = list.locationToIndex(e.getPoint());
@@ -98,13 +120,16 @@ public class MainFrame extends JFrame {
 
                             }
                             else{
-                                int li = currentPath.lastIndexOf("/");
+                                 li = currentPath.lastIndexOf("/");
                                 if (li == -1)
                                     currentPath = "";
                                 else {
                                     currentPath = currentPath.substring(0,li);
+                                    System.out.print("PATCH: ");
+                                    System.out.println(currentPath);
                                 }
                                 try {
+                                    System.out.println(currentPath);
                                     getUpdateFolders(currentPath);
                                 } catch (DbxException e1) {
                                     e1.printStackTrace();
@@ -112,16 +137,74 @@ public class MainFrame extends JFrame {
                             }
                         }
                         else {
-
-
+                            acceptDonwload = false;
                             ListModel lm = list.getModel();
                             path = lm.getElementAt(index).toString();
-                            try {
-                                getUpdateFolders(path);
-                            } catch (DbxException e1) {
-                                e1.printStackTrace();
+                            boolean m = path.contains("."); // если в пути есть точка, значит это файл с расширением,а не папка
+                            if (!m) {
+                                try {
+                                    getUpdateFolders(path);
+                                } catch (DbxException e1) {
+                                    e1.printStackTrace();
+                                }
+                                currentPath = path;
+                            }else
+                            {
+                                int los = path.lastIndexOf("/");
+                                fileDir = path.substring(los);
+                                System.out.println(fileDir);
+                                acceptDonwload = true;
                             }
-                            currentPath = path;
+
+                        }
+                    }
+                }
+            });
+            uploadFileBtn = new JButton("upload file");
+            uploadFileBtn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    super.mouseClicked(e);
+                    dir = currentPath;
+                    InputStream inputStream = null;
+                    try {
+                        inputStream = new FileInputStream(new File(projectPath + adp + "/15.txt"));
+                    } catch (FileNotFoundException e1) {
+                        e1.printStackTrace();
+                    }
+                    try {
+                        client.files.uploadBuilder(dir+"/15.txt").run(inputStream);
+                        getUpdateFolders(currentPath);
+                    } catch (DbxException e1) {
+                        e1.printStackTrace();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+
+                }
+            });
+            downloadFileBtn = new JButton("download file");
+            downloadFileBtn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    System.out.println(acceptDonwload);
+                    super.mouseClicked(e);
+                    if (acceptDonwload) {
+                        dir = currentPath;
+                        OutputStream outStream = null;
+                        try {
+                            outStream = new FileOutputStream(new File(projectPath + adp + fileDir));
+                        } catch (FileNotFoundException e1) {
+                            e1.printStackTrace();
+                        }
+                        try {
+                            System.out.println(dir);
+                            client.files.downloadBuilder(dir + fileDir).run(outStream);
+                            getUpdateFolders(currentPath);
+                        } catch (DbxException e1) {
+                            e1.printStackTrace();
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
                         }
                     }
                 }
@@ -147,6 +230,8 @@ public class MainFrame extends JFrame {
             add(RightPanel,new GridBagConstraints(1, 0, 1, 2, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(btnNameField,new GridBagConstraints(2, 0, 2, 2, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(addFolderBtn,new GridBagConstraints(0, 2, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+            add(uploadFileBtn,new GridBagConstraints(0, 4, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+            add(downloadFileBtn,new GridBagConstraints(0, 6, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             pack();
             setVisible(true);
         }
