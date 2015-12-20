@@ -35,7 +35,6 @@ public class MainFrame extends JFrame {
     private ArrayList<Files.Metadata> entries;
     static final String clientId = "0.1";
     static final String pathToAuthTokens = "JCS\\src\\main\\java\\com\\jcs\\tokens.txt";
-
     MainFrame(String title) throws DbxException, IOException, JsonReader.FileLoadException {
 
         FileReader r = new FileReader(pathToAuthTokens);
@@ -129,7 +128,6 @@ public class MainFrame extends JFrame {
             btnNameField = new JTextField("name_new_folder");
             addFolderBtn.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    System.out.println(e.toString());
                     try {
                         createFolderName = btnNameField.getText();
                         client.files.createFolder(currentPath+"/"+createFolderName);
