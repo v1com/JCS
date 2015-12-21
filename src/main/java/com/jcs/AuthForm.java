@@ -22,8 +22,9 @@ public class AuthForm extends  JFrame{
     static final String clientId = "0.1";
     static final String APP_KEY = "sesmmbymgegew78";
     static final String APP_SECRET = "jl1tqg9yliktnbb";
-    static final String pathToAuthCodes = "JCS\\src\\main\\java\\com\\jcs\\authcodes.txt";
-    static final String pathToAuthTokens = "JCS\\src\\main\\java\\com\\jcs\\tokens.txt";
+    static String pathToAuthCodes ="";
+    static String pathToAuthTokens = "";
+
 
     private MainFrame mainform;
     private JButton buttonAuth;
@@ -33,7 +34,9 @@ public class AuthForm extends  JFrame{
     static final String dbxurl = "https://www.dropbox.com/1/oauth2/authorize?locale=ru_RU&client_id=sesmmbymgegew78&response_type=code";
     static final String yandexurl = "https://oauth.yandex.ru/authorize?response_type=token&client_id=5b9cc1c52a374da3a6f3f218c9d9ecc1";
     AuthForm() throws JsonReader.FileLoadException, IOException, DbxException {
-           setTitle("Authorization window");
+        pathToAuthTokens = new File(".").getCanonicalPath() + "\\src\\main\\java\\com\\jcs\\tokens.txt";
+        pathToAuthCodes =  new File(".").getCanonicalPath() + "\\src\\main\\java\\com\\jcs\\authcodes.txt";
+        setTitle("Authorization window");
            setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
            setSize(1078, 720);
            setLocationRelativeTo(null);
