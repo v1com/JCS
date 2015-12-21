@@ -2,6 +2,8 @@ package com.jcs;
 
 import com.dropbox.core.*;
 import com.dropbox.core.json.JsonReader;
+import com.yandex.disk.client.Credentials;
+import com.yandex.disk.client.TransportClient;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,6 +32,7 @@ public class AuthForm extends  JFrame{
     static int anIntx = 0;
     static int anInty = 0;
     static final String dbxurl = "https://www.dropbox.com/1/oauth2/authorize?locale=ru_RU&client_id=sesmmbymgegew78&response_type=code";
+    static final String yandexurl = "https://oauth.yandex.ru/authorize?response_type=token&client_id=5b9cc1c52a374da3a6f3f218c9d9ecc1";
     AuthForm() throws JsonReader.FileLoadException, IOException, DbxException {
         pathToAuthTokens = new File(".").getCanonicalPath() + "\\src\\main\\java\\com\\jcs\\tokens.txt";
         pathToAuthCodes =  new File(".").getCanonicalPath() + "\\src\\main\\java\\com\\jcs\\authcodes.txt";
@@ -41,7 +44,7 @@ public class AuthForm extends  JFrame{
            codeAuth = new JTextField[3];
            authdbx("dropbox", dbxurl);
            authdbx("google", "http://www.google.com");
-           authdbx("yandex", "http://www.yandex.com");
+           authdbx("yandex", yandexurl);
 
            JButton saveButton = new JButton("Save codes");
            saveButton.addActionListener(new ActionListener() {
@@ -63,6 +66,7 @@ public class AuthForm extends  JFrame{
                    writer.println(ydiskcode);
                    writer.close();
                    try {
+
                        DbxAppInfo appInfo = new DbxAppInfo(APP_KEY, APP_SECRET);
                        DbxRequestConfig config = new DbxRequestConfig(clientId, Locale.getDefault().toString());
                        DbxWebAuthNoRedirect webAuth = new DbxWebAuthNoRedirect(config, appInfo);
@@ -97,7 +101,7 @@ public class AuthForm extends  JFrame{
                        System.out.println(s.toString());
                        return;
                    }
-                   setVisible(false);
+                   //setVisible(false);
                    try {
                        mainform = new MainFrame("JCS - multicloud system");
                    } catch (DbxException e1) {
@@ -117,22 +121,42 @@ public class AuthForm extends  JFrame{
 
     public void authdbx(String name, final String url){
         buttonAuth = new JButton("Go to " + name + " authorization");
-        buttonAuth.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                //Execute when button is pressed
-                if (java.awt.Desktop.isDesktopSupported()) {
-                    try {
-                        System.out.println("Browser open!");
-                        java.awt.Desktop.getDesktop().browse(new URI(url));
-                    } catch (URISyntaxException ex) {
+        if(name.equalsIgnoreCase("dropbox")) {
+            buttonAuth.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    //Execute when button is pressed
+                    if (java.awt.Desktop.isDesktopSupported()) {
+                        try {
+                            System.out.println("Browser open!");
+                            java.awt.Desktop.getDesktop().browse(new URI(url));
+                        } catch (URISyntaxException ex) {
 
-                    } catch (IOException ex) {
-                        System.out.println("Go to " + url + "/");
+                        } catch (IOException ex) {
+                            System.out.println("Go to " + url + "/");
+                        }
                     }
-                }
 
-            }
-        });
+                }
+            });
+        }
+        if(name.equalsIgnoreCase("yandex")){
+            buttonAuth.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    //Execute when button is pressed
+                    if (java.awt.Desktop.isDesktopSupported()) {
+                        try {
+                            System.out.println("Browser open!1");
+                            java.awt.Desktop.getDesktop().browse(new URI(url));
+                        } catch (URISyntaxException ex) {
+
+                        } catch (IOException ex) {
+                            System.out.println("Go to " + url + "/");
+                        }
+                    }
+
+                }
+            });
+        }
         codeAuth[anInty] = new JTextField("Enter an authorization code");
         add(codeAuth[anInty],new GridBagConstraints(anIntx++, anInty, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
         add(buttonAuth,new GridBagConstraints(anIntx, anInty++, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
