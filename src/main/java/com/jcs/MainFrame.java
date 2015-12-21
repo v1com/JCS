@@ -22,7 +22,9 @@ import com.dropbox.core.v2.Files;
 public class MainFrame extends JFrame {
     AuthForm auth = null;
     private JTextField btnNameField;
+    private JTextField nameUploadFile;
     private String createFolderName;
+    private String uploadingFileName;
     private JButton addFolderBtn;
     private JButton uploadFileBtn;
     private JButton downloadFileBtn;
@@ -44,6 +46,9 @@ public class MainFrame extends JFrame {
     String adp;
     String additionalPath;
     String dir = "";
+    String accessChooser = "";
+    boolean access = false;
+    String nameFile;
     MainFrame(String title) throws DbxException, IOException, JsonReader.FileLoadException {
         projectPath = new File(".").getCanonicalPath();
         adp = "\\src\\main\\java\\com\\jcs";
@@ -57,8 +62,6 @@ public class MainFrame extends JFrame {
         }else {
             DbxRequestConfig config = new DbxRequestConfig(clientId, Locale.getDefault().toString());
             client = new DbxClientV2(config, token);
-
-
 
 
 
@@ -166,14 +169,29 @@ public class MainFrame extends JFrame {
                 public void mouseClicked(MouseEvent e) {
                     super.mouseClicked(e);
                     dir = currentPath;
+                    JFileChooser fileopen = new JFileChooser();
+                    int ret = fileopen.showDialog(null, "Open file");
                     InputStream inputStream = null;
-                    try {
-                        inputStream = new FileInputStream(new File(projectPath + adp + "/15.txt"));
-                    } catch (FileNotFoundException e1) {
-                        e1.printStackTrace();
+                    File file = null;
+                    nameFile = null;
+                    if (ret == JFileChooser.APPROVE_OPTION) {
+                         file = fileopen.getSelectedFile();
+                        nameFile = file.getPath();
+                        int lastIndex = nameFile.lastIndexOf("\\");
+                        nameFile = nameFile.substring(lastIndex + 1, nameFile.length());
+                        nameFile = "/"+nameFile;
+                        System.out.println(nameFile);
+
+                        try {
+                            inputStream = new FileInputStream(file);
+                        } catch (FileNotFoundException e1) {
+                            e1.printStackTrace();
+                        }
+
                     }
                     try {
-                        client.files.uploadBuilder(dir+"/15.txt").run(inputStream);
+                        System.out.println(dir+nameFile);
+                        client.files.uploadBuilder(dir + nameFile ).run(inputStream);
                         getUpdateFolders(currentPath);
                     } catch (DbxException e1) {
                         e1.printStackTrace();
@@ -183,6 +201,8 @@ public class MainFrame extends JFrame {
 
                 }
             });
+
+
             downloadFileBtn = new JButton("download file");
             downloadFileBtn.addMouseListener(new MouseAdapter() {
                 @Override
@@ -209,13 +229,14 @@ public class MainFrame extends JFrame {
                     }
                 }
             });
+
             addFolderBtn = new JButton("add folder");
             btnNameField = new JTextField("name_new_folder");
             addFolderBtn.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     try {
                         createFolderName = btnNameField.getText();
-                        client.files.createFolder(currentPath+"/"+createFolderName);
+                        client.files.createFolder(currentPath + "/" + createFolderName);
                         getUpdateFolders(currentPath);
                     } catch (DbxException e1) {
                         e1.printStackTrace();
@@ -223,15 +244,17 @@ public class MainFrame extends JFrame {
                 }
             });
 
-            RightPanel.add(folderList,new GridBagConstraints(1, 0, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+
+            RightPanel.add(folderList, new GridBagConstraints(1, 0, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
 
 
             //add(LeftPanel);
             add(RightPanel,new GridBagConstraints(1, 0, 1, 2, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
-            add(btnNameField,new GridBagConstraints(2, 0, 2, 2, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+            add(btnNameField,new GridBagConstraints(2, 0, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(addFolderBtn,new GridBagConstraints(0, 2, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(uploadFileBtn,new GridBagConstraints(0, 4, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(downloadFileBtn,new GridBagConstraints(0, 6, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+
             pack();
             setVisible(true);
         }
