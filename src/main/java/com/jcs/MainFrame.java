@@ -89,10 +89,7 @@ public class MainFrame extends JFrame {
 
 
 
-
             getUpdateFolders();
-
-            dir = "/kill me";
             // Скачивание файла из дропбокс
            // OutputStream outStream = new FileOutputStream(new File(projectPath + adp + "/out.txt"));  // загрузка с дропбокса
             //client.files.downloadBuilder(dir + "/gg.txt").run(outStream);
@@ -102,23 +99,17 @@ public class MainFrame extends JFrame {
             InputStream inputStream = new FileInputStream(new File(projectPath + adp + "/gg.txt"));
             client.files.uploadBuilder(dir+"/gg.txt").run(inputStream);
             */
-
             folderList = new JList(listModel);
-            //listModel.add(0,"...");
             folderList.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     super.mouseClicked(e);
                     JList list = (JList) e.getSource();
-                  ///*
-                    //*/
                     acceptDonwload = false;
                     if (e.getClickCount() == 2) {
                         // Double-click detected
                         int index = list.locationToIndex(e.getPoint());
                         if (index == 0){
-
-
                             if (currentPath == "" ) {
 
                             }
@@ -128,11 +119,8 @@ public class MainFrame extends JFrame {
                                     currentPath = "";
                                 else {
                                     currentPath = currentPath.substring(0,li);
-                                    System.out.print("PATCH: ");
-                                    System.out.println(currentPath);
                                 }
                                 try {
-                                    System.out.println(currentPath);
                                     getUpdateFolders(currentPath);
                                 } catch (DbxException e1) {
                                     e1.printStackTrace();
@@ -154,9 +142,42 @@ public class MainFrame extends JFrame {
                             }else
                             {
                                 int los = path.lastIndexOf("/");
-                                fileDir = path.substring(los);
-                                System.out.println(fileDir);
-                                acceptDonwload = true;
+                                fileDir = path.substring(los+1,path.length());
+                                fileDir = "\\"+fileDir;
+                                dir = currentPath;
+                                OutputStream outStream = null;
+                                try {
+                                    outStream = new FileOutputStream(new File(projectPath + adp + fileDir));
+                                } catch (FileNotFoundException e1) {
+                                    e1.printStackTrace();
+                                }
+                                try {
+                                    los = fileDir.lastIndexOf(fileDir);
+                                    fileDir = "/" + fileDir.substring(los+1,fileDir.length());
+                                    dir = currentPath;
+                                    if (!dir.isEmpty()) {
+
+                                        System.out.println(dir + fileDir);
+                                        try {
+                                            client.files.downloadBuilder(dir+fileDir).run(outStream);
+                                            getUpdateFolders(currentPath);
+                                        } catch (IOException e1) {
+                                            e1.printStackTrace();
+                                        }
+                                    }else
+                                    {
+                                        try {
+                                            client.files.downloadBuilder(fileDir).run(outStream);
+                                        } catch (IOException e1) {
+                                            e1.printStackTrace();
+                                        }
+                                        getUpdateFolders(currentPath);
+                                    }
+
+
+                                } catch (DbxException e1) {
+                                    e1.printStackTrace();
+                                }
                             }
 
                         }
@@ -187,7 +208,6 @@ public class MainFrame extends JFrame {
                         } catch (FileNotFoundException e1) {
                             e1.printStackTrace();
                         }
-
                     }
                     try {
                         System.out.println(dir+nameFile);
@@ -201,35 +221,6 @@ public class MainFrame extends JFrame {
 
                 }
             });
-
-
-            downloadFileBtn = new JButton("download file");
-            downloadFileBtn.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    System.out.println(acceptDonwload);
-                    super.mouseClicked(e);
-                    if (acceptDonwload) {
-                        dir = currentPath;
-                        OutputStream outStream = null;
-                        try {
-                            outStream = new FileOutputStream(new File(projectPath + adp + fileDir));
-                        } catch (FileNotFoundException e1) {
-                            e1.printStackTrace();
-                        }
-                        try {
-                            System.out.println(dir);
-                            client.files.downloadBuilder(dir + fileDir).run(outStream);
-                            getUpdateFolders(currentPath);
-                        } catch (DbxException e1) {
-                            e1.printStackTrace();
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                }
-            });
-
             addFolderBtn = new JButton("add folder");
             btnNameField = new JTextField("name_new_folder");
             addFolderBtn.addActionListener(new ActionListener() {
@@ -246,15 +237,11 @@ public class MainFrame extends JFrame {
 
 
             RightPanel.add(folderList, new GridBagConstraints(1, 0, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
-
-
             //add(LeftPanel);
             add(RightPanel,new GridBagConstraints(1, 0, 1, 2, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(btnNameField,new GridBagConstraints(2, 0, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(addFolderBtn,new GridBagConstraints(0, 2, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
             add(uploadFileBtn,new GridBagConstraints(0, 4, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
-            add(downloadFileBtn,new GridBagConstraints(0, 6, 4, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
-
             pack();
             setVisible(true);
         }
@@ -275,13 +262,12 @@ public class MainFrame extends JFrame {
         listModel.clear();
         listModel.add(0, "...");
         entries = client.files.listFolder(path).entries;
+
         for (Files.Metadata metadata : entries) {
             listModel.addElement(metadata.pathLower);
         }
     }
-
     public static void main(String[] args) throws JsonReader.FileLoadException, IOException, DbxException {
         MainFrame mainform = new MainFrame("JCS - multicloud system");
-
     }
 }
