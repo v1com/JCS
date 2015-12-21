@@ -6,23 +6,16 @@
 
 package com.yandex.disk.client;
 
-import android.content.Context;
-import android.text.TextUtils;
-import android.util.Log;
 import com.yandex.disk.client.exceptions.CancelledDownloadException;
 import com.yandex.disk.client.exceptions.CancelledPropfindException;
-import com.yandex.disk.client.exceptions.DownloadNoSpaceAvailableException;
 import com.yandex.disk.client.exceptions.DuplicateFolderException;
-import com.yandex.disk.client.exceptions.RemoteFileNotFoundException;
-import com.yandex.disk.client.exceptions.FileModifiedException;
-import com.yandex.disk.client.exceptions.FileNotModifiedException;
+import com.yandex.disk.client.exceptions.FileDownloadException;
 import com.yandex.disk.client.exceptions.FileTooBigServerException;
 import com.yandex.disk.client.exceptions.FilesLimitExceededServerException;
 import com.yandex.disk.client.exceptions.IntermediateFolderNotExistException;
 import com.yandex.disk.client.exceptions.PreconditionFailedException;
 import com.yandex.disk.client.exceptions.RangeNotSatisfiableException;
 import com.yandex.disk.client.exceptions.ServerWebdavException;
-import com.yandex.disk.client.exceptions.ServiceUnavailableWebdavException;
 import com.yandex.disk.client.exceptions.UnknownServerWebdavException;
 import com.yandex.disk.client.exceptions.UnsupportedMediaTypeException;
 import com.yandex.disk.client.exceptions.WebdavClientInitException;
@@ -69,14 +62,11 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -90,7 +80,6 @@ import java.util.regex.Pattern;
 public class TransportClient {
 
     private static final String TAG = "TransportClient";
-    private static final String ATTR_ETAG_FROM_REDIRECT = "yandex.etag-from-redirect";
 
     protected static URL serverURL;
 
@@ -104,53 +93,37 @@ public class TransportClient {
 
     protected static final String userAgent = "Webdav Android Client Example/1.0";
     protected static final String LOCATION_HEADER = "Location";
-    public static final String NO_REDIRECT_CONTEXT = "yandex.no-redirect";
+    protected static final String NO_REDIRECT_CONTEXT = "yandex.no-redirect";
     protected static final String WEBDAV_PROTO_DEPTH = "Depth";
 
     protected static final int NETWORK_TIMEOUT = 30000;
     protected static final int UPLOAD_NETWORK_TIMEOUT = NETWORK_TIMEOUT * 10;
 
-    protected Context context;
     protected Credentials creds;
     protected final HttpClient httpClient;
 
-    public static TransportClient getInstance(Context context, Credentials credentials)
+    public static TransportClient getInstance(Credentials credentials)
             throws WebdavClientInitException {
-        return new TransportClient(context, credentials, NETWORK_TIMEOUT);
+        return new TransportClient(credentials, NETWORK_TIMEOUT);
     }
 
-    public static TransportClient getUploadInstance(Context context, Credentials credentials)
+    public static TransportClient getUploadInstance(Credentials credentials)
             throws WebdavClientInitException {
-        return new TransportClient(context, credentials, UPLOAD_NETWORK_TIMEOUT);
+        return new TransportClient(credentials, UPLOAD_NETWORK_TIMEOUT);
     }
 
-    public TransportClient(Context context, Credentials credentials, DefaultHttpClient httpClient)
+    protected TransportClient(Credentials credentials, int timeout)
             throws WebdavClientInitException {
-        this.context = context;
-        this.creds = credentials;
-        this.httpClient = httpClient;
-        initHttpClient(httpClient);
+        this(credentials, userAgent, timeout);
     }
 
-    protected TransportClient(Context context, Credentials credentials, int timeout)
+    protected TransportClient(Credentials credentials, String userAgent, int timeout)
             throws WebdavClientInitException {
-        this(context, credentials, userAgent, timeout);
-    }
-
-    protected TransportClient(Context context, Credentials credentials, String userAgent, int timeout)
-            throws WebdavClientInitException {
-        this.context = context;
         this.creds = credentials;
 
         DefaultHttpClient httpClient = getNewHttpClient(userAgent, timeout);
         httpClient.setCookieStore(new BasicCookieStore());
         this.httpClient = httpClient;
-        initHttpClient(httpClient);
-    }
-
-    public static void initHttpClient(DefaultHttpClient httpClient) {
-        httpClient.setHttpRequestRetryHandler(requestRetryHandler);
-        httpClient.setRedirectHandler(redirectHandler);
     }
 
     protected static DefaultHttpClient getNewHttpClient(String userAgent, int timeout)
@@ -184,6 +157,8 @@ public class TransportClient {
         }
         res.getParams().setParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, true);
         res.getParams().setParameter(CoreProtocolPNames.WAIT_FOR_CONTINUE, timeout);
+        res.setHttpRequestRetryHandler(requestRetryHandler);
+        res.setRedirectHandler(redirectHandler);
         return res;
     }
 
@@ -201,10 +176,7 @@ public class TransportClient {
             if (noRedirect != null && (Boolean) noRedirect) {
                 return false;
             }
-            Header etagHeader = httpResponse.getFirstHeader("Etag");
-            if (etagHeader != null) {
-                httpContext.setAttribute(ATTR_ETAG_FROM_REDIRECT, etagHeader.getValue());
-            }
+
             return super.isRedirectRequested(httpResponse, httpContext);
         }
     };
@@ -337,9 +309,6 @@ public class TransportClient {
             case 413:
                 Log.d(TAG, "Http code 413 (File too big): "+details);
                 throw new FileTooBigServerException();
-            case 503:
-                Log.d(TAG, "Http code 503 (Service Unavailable): "+details);
-                throw new ServiceUnavailableWebdavException();
             case 507:
                 Log.d(TAG, "Http code 507 (Insufficient Storage): "+details);
                 throw new FilesLimitExceededServerException();
@@ -355,25 +324,22 @@ public class TransportClient {
     }
 
     private static final String PROPFIND_REQUEST =
-            "<?xml version='1.0' encoding='utf-8' ?>" +
-                    "<d:propfind xmlns:d='DAV:'>" +
-                    "<d:prop xmlns:m='urn:yandex:disk:meta'>" +
-                    "<d:resourcetype/>" +
-                    "<d:displayname/>" +
-                    "<d:getcontentlength/>" +
-                    "<d:getlastmodified/>" +
-                    "<d:getetag/>" +
-                    "<d:getcontenttype/>" +
-                    "<m:alias_enabled/>" +
-                    "<m:visible/>" +
-                    "<m:shared/>" +
-                    "<m:readonly/>" +
-                    "<m:public_url/>" +
-                    "<m:etime/>" +
-                    "<m:mediatype/>" +
-                    "<m:mpfs_file_id/>" +
-                    "<m:hasthumbnail/>" +
-                    "</d:prop>" +
+            "<?xml version='1.0' encoding='utf-8' ?>"+
+                    "<d:propfind xmlns:d='DAV:'>"+
+                    "<d:prop xmlns:m='urn:yandex:disk:meta'>"+
+                    "<d:resourcetype/>"+
+                    "<d:displayname/>"+
+                    "<d:getcontentlength/>"+
+                    "<d:getlastmodified/>"+
+                    "<d:getetag/>"+
+                    "<d:getcontenttype/>"+
+                    "<m:alias_enabled/>"+
+                    "<m:visible/>"+
+                    "<m:shared/>"+
+                    "<m:readonly/>"+
+                    "<m:public_url/>"+
+                    "<m:etime/>"+
+                    "</d:prop>"+
                     "</d:propfind>";
 
     private static final int MAX_ITEMS_PER_PAGE = Integer.MAX_VALUE;
@@ -389,16 +355,12 @@ public class TransportClient {
      * @see #getList(String, int, String, String, ListParsingHandler)
      */
     public void getList(String path, ListParsingHandler handler)
-            throws IOException, PreconditionFailedException, UnknownServerWebdavException, WebdavFileNotFoundException,
-            CancelledPropfindException, WebdavUserNotInitialized, ServerWebdavException, WebdavNotAuthorizedException,
-            WebdavForbiddenException, WebdavInvalidUserException {
+            throws WebdavException, IOException {
         getList(path, MAX_ITEMS_PER_PAGE, null, null, handler);
     }
 
     public void getList(String path, int itemsPerPage, ListParsingHandler handler)
-            throws IOException, PreconditionFailedException, UnknownServerWebdavException, WebdavFileNotFoundException,
-            CancelledPropfindException, WebdavUserNotInitialized, ServerWebdavException, WebdavNotAuthorizedException,
-            WebdavForbiddenException, WebdavInvalidUserException {
+            throws WebdavException, IOException {
         getList(path, itemsPerPage, null, null, handler);
     }
 
@@ -413,9 +375,7 @@ public class TransportClient {
      * @throws IOException                I/O exceptions
      */
     public void getList(String path, int itemsPerPage, String sortBy, String orderBy, ListParsingHandler handler)
-            throws IOException, CancelledPropfindException, WebdavNotAuthorizedException, WebdavInvalidUserException,
-            WebdavForbiddenException, WebdavFileNotFoundException, WebdavUserNotInitialized, UnknownServerWebdavException,
-            PreconditionFailedException, ServerWebdavException {
+            throws WebdavException, IOException {
         Log.d(TAG, "getList for "+path);
 
         boolean itemsFinished = false;
@@ -438,9 +398,9 @@ public class TransportClient {
             logMethod(propFind);
             creds.addAuthHeader(propFind);
             propFind.setHeader(WEBDAV_PROTO_DEPTH, "1");
-            HttpContext httpContext = handler.onCreateRequest(propFind, new StringEntity(PROPFIND_REQUEST));
+            propFind.setEntity(new StringEntity(PROPFIND_REQUEST));
 
-            HttpResponse response = executeRequest(propFind, httpContext);
+            HttpResponse response = executeRequest(propFind);
             StatusLine statusLine = response.getStatusLine();
             if (statusLine != null) {
                 int code = statusLine.getStatusCode();
@@ -472,7 +432,7 @@ public class TransportClient {
                 countOnPage = parser.getParsedCount();
                 Log.d(TAG, "countOnPage="+countOnPage);
             } catch (XmlPullParserException ex) {
-                throw new UnknownServerWebdavException(ex);
+                throw new WebdavException(ex);
             } finally {
                 consumeContent(response);
             }
@@ -513,9 +473,11 @@ public class TransportClient {
         if (statusLine != null) {
             int statusCode = statusLine.getStatusCode();
             if (statusLine.getStatusCode() == 200) {
+//                Log.d(TAG, "200 "+statusLine.getReasonPhrase()+" for file "+file.getAbsolutePath()+" in dir "+dir);
                 Header[] headers = response.getHeaders("Content-Length");
                 if (headers.length > 0) {
                     String contentLength = headers[0].getValue();
+//                    Log.d(TAG, "Content-Length: "+contentLength);
                     return Long.valueOf(contentLength);
                 } else {
                     return 0;
@@ -560,7 +522,7 @@ public class TransportClient {
             throws IntermediateFolderNotExistException, IOException, WebdavUserNotInitialized, PreconditionFailedException,
             WebdavNotAuthorizedException, ServerWebdavException, UnknownServerWebdavException {
 
-        String destName = TextUtils.isEmpty(destFileName) ? file.getName() : destFileName;
+        String destName = isEmpty(destFileName) ? file.getName() : destFileName;
         String url = getUrl()+encodeURL(dir+"/"+destName);
         Log.d(TAG, "uploadFile: put to "+getUrl()+dir+"/"+destName);
 
@@ -582,7 +544,7 @@ public class TransportClient {
         }
 
         if (uploadedSize > 0) {
-            StringBuilder contentRange = new StringBuilder();
+            StringBuffer contentRange = new StringBuffer();
             contentRange.append("bytes ").append(uploadedSize).append("-").append(file.length()-1).append("/").append(file.length());
             Log.d(TAG, "Content-Range: "+contentRange);
             put.addHeader("Content-Range", contentRange.toString());
@@ -611,103 +573,30 @@ public class TransportClient {
 
     public void downloadFile(String path, File saveTo, ProgressListener progressListener)
             throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, DownloadNoSpaceAvailableException, RemoteFileNotFoundException, RangeNotSatisfiableException, FileModifiedException {
+            CancelledDownloadException, UnknownServerWebdavException {
         downloadFile(path, saveTo, 0, 0, progressListener);
     }
 
-    public void downloadFile(final String path, final File saveTo, final long length, final long fileSize, final ProgressListener progressListener)
+    public void downloadFile(String path, File saveTo, long length, long fileSize, ProgressListener progressListener)
             throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, DownloadNoSpaceAvailableException, RemoteFileNotFoundException, RangeNotSatisfiableException, FileModifiedException {
-        download(path, new DownloadListener() {
-            @Override
-            public long getLocalLength() {
-                return length;
-            }
-
-            @Override
-            public OutputStream getOutputStream(boolean append)
-                    throws FileNotFoundException {
-                return new FileOutputStream(saveTo, append);
-            }
-
-            @Override
-            public void updateProgress(long loaded, long total) {
-                progressListener.updateProgress(loaded, total);
-            }
-
-            @Override
-            public boolean hasCancelled() {
-                return progressListener.hasCancelled();
-            }
-        });
-    }
-
-    public byte[] download(final String path)
-            throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, DownloadNoSpaceAvailableException, RemoteFileNotFoundException, RangeNotSatisfiableException, FileModifiedException {
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        download(path, new DownloadListener() {
-            @Override
-            public OutputStream getOutputStream(boolean append)
-                    throws IOException {
-                return outputStream;
-            }
-        });
-        return outputStream.toByteArray();
-    }
-
-    public byte[] downloadUrl(final String url)
-            throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, DownloadNoSpaceAvailableException, RemoteFileNotFoundException, RangeNotSatisfiableException, FileModifiedException {
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        downloadUrl(url, new DownloadListener() {
-            @Override
-            public OutputStream getOutputStream(boolean append)
-                    throws IOException {
-                return outputStream;
-            }
-        });
-        return outputStream.toByteArray();
-    }
-
-    public void download(String path, DownloadListener downloadListener)
-            throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, DownloadNoSpaceAvailableException, RemoteFileNotFoundException, RangeNotSatisfiableException, FileModifiedException {
-        downloadUrl(getUrl()+encodeURL(path), downloadListener);
-    }
-
-    public void downloadPreview(String path, DownloadListener downloadListener)
-            throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, DownloadNoSpaceAvailableException, RemoteFileNotFoundException, RangeNotSatisfiableException, FileModifiedException {
-        downloadUrl(getUrl()+path, downloadListener);
-    }
-
-    private void downloadUrl(String url, DownloadListener downloadListener)
-            throws IOException, WebdavUserNotInitialized, PreconditionFailedException, WebdavNotAuthorizedException, ServerWebdavException,
-            CancelledDownloadException, UnknownServerWebdavException, FileNotModifiedException, RemoteFileNotFoundException, DownloadNoSpaceAvailableException, RangeNotSatisfiableException, FileModifiedException {
+            CancelledDownloadException, UnknownServerWebdavException {
+        String url = getUrl()+encodeURL(path);
         HttpGet get = new HttpGet(url);
-        logMethod(get);
+        logMethod(get, " to "+saveTo);
         creds.addAuthHeader(get);
 
-        long length = downloadListener.getLocalLength();
-        String ifTag = "If-None-Match";
-        if (length >= 0) {
-            ifTag = "If-Range";
-            StringBuilder contentRange = new StringBuilder();
+        if (length > 0) {
+            StringBuffer contentRange = new StringBuffer();
             contentRange.append("bytes=").append(length).append("-");
+            if (fileSize > 0) {
+                contentRange.append(fileSize-1);
+            }
             Log.d(TAG, "Range: "+contentRange);
             get.addHeader("Range", contentRange.toString());
         }
 
-        String etag = downloadListener.getETag();
-        if (etag != null) {
-            Log.d(TAG, ifTag+": "+etag);
-            get.addHeader(ifTag, etag);
-        }
-
         boolean partialContent = false;
-        BasicHttpContext httpContext = new BasicHttpContext();
-        HttpResponse httpResponse = executeRequest(get, httpContext);
+        HttpResponse httpResponse = executeRequest(get);
         StatusLine statusLine = httpResponse.getStatusLine();
         if (statusLine != null) {
             int statusCode = statusLine.getStatusCode();
@@ -718,12 +607,9 @@ public class TransportClient {
                 case 206:
                     partialContent = true;
                     break;
-                case 304:
-                    consumeContent(httpResponse);
-                    throw new FileNotModifiedException();
                 case 404:
                     consumeContent(httpResponse);
-                    throw new RemoteFileNotFoundException("error while downloading file "+url);
+                    throw new FileDownloadException("error while downloading file "+url);
                 case 416:
                     consumeContent(httpResponse);
                     throw new RangeNotSatisfiableException("error while downloading file "+url);
@@ -735,17 +621,18 @@ public class TransportClient {
 
         HttpEntity response = httpResponse.getEntity();
         long contentLength = response.getContentLength();
-        Log.d(TAG, "download: contentLength="+contentLength);
+        Log.d(TAG, "downloadFile: contentLength="+contentLength);
 
         long loaded;
         if (partialContent) {
             ContentRangeResponse contentRangeResponse = parseContentRangeHeader(httpResponse.getLastHeader("Content-Range"));
-            Log.d(TAG, "download: contentRangeResponse="+contentRangeResponse);
+            Log.d(TAG, "downloadFile: contentRangeResponse="+contentRangeResponse);
             if (contentRangeResponse != null) {
                 loaded = contentRangeResponse.getStart();
                 contentLength = contentRangeResponse.getSize();
             } else {
                 loaded = length;
+                contentLength = fileSize;
             }
         } else {
             loaded = 0;
@@ -754,34 +641,20 @@ public class TransportClient {
             }
         }
 
-        String serverEtag = (String) httpContext.getAttribute(ATTR_ETAG_FROM_REDIRECT);
-        if (!partialContent) {
-            downloadListener.setEtag(serverEtag);
-        } else {
-            if (serverEtag != null && !serverEtag.equals(etag)) {
-                response.consumeContent();
-                throw new FileModifiedException("file changed, new etag is '" + serverEtag  +"'");
-            } else {
-                //Etag hasn't changed
-            }
-        }
-        downloadListener.setStartPosition(loaded);
-        downloadListener.setContentLength(contentLength);
-
         int count;
         InputStream content = response.getContent();
-        OutputStream fos = downloadListener.getOutputStream(partialContent);
+        FileOutputStream fos = new FileOutputStream(saveTo, partialContent);
         try {
             final byte[] downloadBuffer = new byte[1024];
             while ((count = content.read(downloadBuffer)) != -1) {
-                if (downloadListener.hasCancelled()) {
-                    Log.i(TAG, "Downloading "+url+" canceled");
+                if (progressListener.hasCancelled()) {
+                    Log.i(TAG, "Downloading "+path+" canceled");
                     get.abort();
                     throw new CancelledDownloadException();
                 }
                 fos.write(downloadBuffer, 0, count);
                 loaded += count;
-                downloadListener.updateProgress(loaded, contentLength);
+                progressListener.updateProgress(loaded, contentLength);
             }
         } catch (CancelledDownloadException ex) {
             throw ex;
@@ -830,57 +703,6 @@ public class TransportClient {
             Log.d(TAG, "parseContentRangeHeader: "+header, ex);
             return null;
         }
-    }
-
-    /**
-     * http://api.yandex.ru/disk/doc/dg/reference/preview.xml
-     */
-    public enum PreviewSize {
-        XXXS, XXS, XS, S, M, L, XL, XXL, XXXL
-    }
-
-    private static final String PREVIEW_ARG = "preview";
-    private static final String SIZE_ARG = "size";
-
-    private static void checkPath(String path)
-            throws IllegalArgumentException {
-        if (path == null || path.contains("?")) {
-            throw new IllegalArgumentException();
-        }
-    }
-
-    public static String makePreviewPath(String path, PreviewSize size)
-            throws IllegalArgumentException {
-        checkPath(path);
-        if (size == null) {
-            throw new IllegalArgumentException();
-        }
-        return path+"?"+PREVIEW_ARG+"&"+SIZE_ARG+"="+size.name();
-    }
-
-    public static String makePreviewPath(String path, int size)
-            throws IllegalArgumentException {
-        checkPath(path);
-        if (size <= 0) {
-            throw new IllegalArgumentException();
-        }
-        return path+"?"+PREVIEW_ARG+"&"+SIZE_ARG+"="+size;
-    }
-
-    public static String makePreviewPath(String path, int sizeX, int sizeY) {
-        checkPath(path);
-        if (sizeX <= 0 && sizeY <= 0) {
-            throw new IllegalArgumentException();
-        }
-        StringBuilder size = new StringBuilder();
-        if (sizeX > 0) {
-            size.append(sizeX);
-        }
-        size.append("x");
-        if (sizeY > 0) {
-            size.append(sizeY);
-        }
-        return path+"?"+PREVIEW_ARG+"&"+SIZE_ARG+"="+size;
     }
 
     /**
@@ -1061,5 +883,9 @@ public class TransportClient {
         public String getMethod() {
             return "MOVE";
         }
+    }
+
+    private static boolean isEmpty(String str) {
+        return (str == null || str.length() == 0 ? true : false);
     }
 }

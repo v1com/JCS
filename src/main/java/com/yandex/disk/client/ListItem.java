@@ -7,26 +7,23 @@
 package com.yandex.disk.client;
 
 import java.io.File;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-import android.text.format.Time;
-import android.util.Log;
-
-public class ListItem implements Parcelable {
+public class ListItem {
 
     private static final String TAG = "ListItem";
 
-    private String displayName, fullPath, etag, contentType, ownerName, publicUrl, mediaType, mpfsFileId;
-    private boolean isCollection, aliasEnabled, shared, readOnly, visible, hasThumbnail;
+    private String displayName, fullPath, etag, contentType, ownerName, publicUrl;
+    private boolean isCollection, aliasEnabled, shared, readOnly, visible;
     private long contentLength, lastUpdated, etime;
 
     public static final class Builder {
-        private String fullPath, displayName, lastModified, etag, contentType, ownerName, publicUrl, mediaType, mpfsFileId;
+        private String fullPath, displayName, lastModified, etag, contentType, ownerName, publicUrl;
         private long contentLength, etime;
-        private boolean isCollection, aliasEnabled, visible, shared, readOnly, hasThumbnail;
+        private boolean isCollection, aliasEnabled, visible, shared, readOnly;
 
         public void setFullPath(String fullPath) {
             this.fullPath = fullPath;
@@ -84,28 +81,15 @@ public class ListItem implements Parcelable {
             this.etime = etime;
         }
 
-        public void setMediaType(String mediaType) {
-            this.mediaType = mediaType;
-        }
-
-        public void setMpfsFileId(String mpfsFileId) {
-            this.mpfsFileId = mpfsFileId;
-        }
-
-        public void setHasThumbnail(boolean hasThumbnail) {
-            this.hasThumbnail = hasThumbnail;
-        }
-
         public ListItem build() {
             return new ListItem(fullPath, displayName, contentLength, lastModified, isCollection, etag,
-                                contentType, shared, ownerName, aliasEnabled, readOnly, visible, publicUrl,
-                                etime, mediaType, mpfsFileId, hasThumbnail);
+                                contentType, shared, ownerName, aliasEnabled, readOnly, visible, publicUrl, etime);
         }
     }
 
     private ListItem(String fullPath, String displayName, long contentLength, String lastUpdated, boolean isCollection, String etag,
                      String contentType, boolean shared, String ownerName, boolean aliasEnabled, boolean readOnly, boolean visible,
-                     String publicUrl, long etime, String mediaType, String mpfsFileId, boolean hasThumbnail) {
+                     String publicUrl, long etime) {
         this.fullPath = fullPath;
         if (displayName != null) {
             this.displayName = displayName;
@@ -124,14 +108,11 @@ public class ListItem implements Parcelable {
         this.visible = visible;
         this.publicUrl = publicUrl;
         this.etime = etime;
-        this.mediaType = mediaType;
-        this.mpfsFileId = mpfsFileId;
-        this.hasThumbnail = hasThumbnail;
     }
 
     private ListItem(String fullPath, String displayName, long contentLength, long lastUpdated, boolean isCollection, String etag,
                      boolean aliasEnabled, String contentType, boolean shared, boolean readonly, String ownerName, String publicUrl,
-                     long etime, String mediaType, String mpfsFileId, boolean hasThumbnail) {
+                     long etime) {
         this.fullPath = fullPath;
         this.displayName = displayName;
         this.contentLength = contentLength;
@@ -145,9 +126,6 @@ public class ListItem implements Parcelable {
         this.ownerName = ownerName;
         this.publicUrl = publicUrl;
         this.etime = etime;
-        this.mediaType = mediaType;
-        this.mpfsFileId = mpfsFileId;
-        this.hasThumbnail = hasThumbnail;
     }
 
     private static final Map<String, Integer> MONTH = new HashMap<String, Integer>();
@@ -172,10 +150,12 @@ public class ListItem implements Parcelable {
             if (datetime != null && datetime.length() > 0) {
                 String[] s = datetime.split("(\\s+|\\-|\\:)+");  // Tue, 14 Feb 2012 10:33:07 GMT
                 if (s.length >= 7) {
-                    Time time = new Time(s[7]);
-                    time.set(Integer.valueOf(s[6]), Integer.valueOf(s[5]), Integer.valueOf(s[4]),
-                             Integer.valueOf(s[1]), MONTH.get(s[2]), Integer.valueOf(s[3]));
-                    return time.toMillis(true);
+                    TimeZone tz = TimeZone.getTimeZone(s[7]);
+                    Calendar calendar = Calendar.getInstance(tz);
+                    //noinspection MagicConstant
+                    calendar.set(Integer.valueOf(s[3]), MONTH.get(s[2]), Integer.valueOf(s[1]),
+                                 Integer.valueOf(s[4]), Integer.valueOf(s[5]), Integer.valueOf(s[6]));
+                    return calendar.getTimeInMillis();
                 }
             }
         } catch (Throwable ex) {
@@ -200,52 +180,8 @@ public class ListItem implements Parcelable {
                 ", readOnly="+readOnly+
                 ", visible="+visible+
                 ", publicUrl="+publicUrl+
-                ", etime="+etime+
-                ", mediaType="+mediaType+
-                ", mpfsFileId="+mpfsFileId+
-                ", hasThumbnail="+hasThumbnail+
                 " }";
     }
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel parcel, int i) {
-        parcel.writeString(fullPath);
-        parcel.writeString(displayName);
-        parcel.writeLong(contentLength);
-        parcel.writeLong(lastUpdated);
-        parcel.writeByte((byte) (isCollection ? 1 : 0));
-        parcel.writeString(etag);
-        parcel.writeByte((byte) (aliasEnabled ? 1 : 0));
-        parcel.writeString(contentType);
-        parcel.writeByte((byte) (shared ? 1 : 0));
-        parcel.writeByte((byte) (readOnly ? 1 : 0));
-        parcel.writeString(ownerName);
-        parcel.writeString(publicUrl);
-        parcel.writeLong(etime);
-        parcel.writeString(mediaType);
-        parcel.writeString(mpfsFileId);
-        parcel.writeByte((byte) (hasThumbnail ? 1 : 0));
-    }
-
-    public static final Parcelable.Creator<ListItem> CREATOR = new Parcelable.Creator<ListItem>() {
-
-        public ListItem createFromParcel(Parcel parcel) {
-            return new ListItem(parcel.readString(), parcel.readString(), parcel.readLong(),
-                                parcel.readLong(), parcel.readByte() > 0, parcel.readString(), parcel.readByte() > 0,
-                                parcel.readString(), parcel.readByte() > 0, parcel.readByte() > 0,
-                                parcel.readString(), parcel.readString(), parcel.readLong(), parcel.readString(),
-                                parcel.readString(), parcel.readByte() > 0);
-        }
-
-        public ListItem[] newArray(int size) {
-            return new ListItem[size];
-        }
-    };
 
     public String getFullPath() {
         return fullPath;
@@ -308,17 +244,5 @@ public class ListItem implements Parcelable {
 
     public long getEtime() {
         return etime;
-    }
-
-    public String getMediaType() {
-        return mediaType;
-    }
-
-    public String getMpfsFileId() {
-        return mpfsFileId;
-    }
-
-    public boolean hasThumbnail() {
-        return hasThumbnail;
     }
 }

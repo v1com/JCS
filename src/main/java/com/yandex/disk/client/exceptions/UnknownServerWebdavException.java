@@ -7,10 +7,6 @@
 package com.yandex.disk.client.exceptions;
 
 public class UnknownServerWebdavException extends WebdavException {
-    public UnknownServerWebdavException(Exception ex) {
-        super(ex);
-    }
-
     public UnknownServerWebdavException(String message) {
         super(message);
     }
