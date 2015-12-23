@@ -5,10 +5,7 @@ import com.dropbox.core.DbxRequestConfig;
 import com.dropbox.core.json.JsonReader;
 import com.dropbox.core.v2.DbxClientV2;
 import com.dropbox.core.v2.Files;
-import com.yandex.disk.client.Credentials;
-import com.yandex.disk.client.ListItem;
-import com.yandex.disk.client.ListParsingHandler;
-import com.yandex.disk.client.TransportClient;
+import com.yandex.disk.client.*;
 import com.yandex.disk.client.exceptions.*;
 
 import javax.swing.*;
@@ -19,6 +16,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
 import java.util.*;
+
+import static javax.swing.JFileChooser.DIRECTORIES_ONLY;
 
 /**
  * Created by Anderson on 31.10.2015.
@@ -349,7 +348,10 @@ public class MainFrame extends JFrame {
                             fileDir = "\\"+fileDir;
                             dir = currentPath;
                             JFileChooser saveFile = new JFileChooser();
-                            int ret = saveFile.showDialog(null, "Save file");
+                            saveFile.setFileSelectionMode(DIRECTORIES_ONLY);
+                            System.out.println();
+                            saveFile.setApproveButtonText("Choose");
+                            int ret = saveFile.showOpenDialog(null);
                             File file = null;
                             String pathToSave = "";
 
@@ -357,9 +359,20 @@ public class MainFrame extends JFrame {
                                 file = saveFile.getSelectedFile();
                                 pathToSave = file.getAbsolutePath();
                             }
+
+                            ProgressListener pl = new ProgressListener() {
+                                public void updateProgress(long loaded, long total) {
+
+                                }
+
+                                public boolean hasCancelled() {
+                                    return false;
+                                }
+                            };
+
                             try {
                                 clientInstance.downloadFile(currentPath + "/" + lm.getElementAt(index).toString(),
-                                        new File(pathToSave), null);
+                                        new File(pathToSave + "/" + lm.getElementAt(index).toString()), pl);
                             } catch (IOException e1) {
                                 e1.printStackTrace();
                             } catch (WebdavUserNotInitialized webdavUserNotInitialized) {
