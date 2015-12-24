@@ -2,8 +2,6 @@ package com.jcs;
 
 import com.dropbox.core.*;
 import com.dropbox.core.json.JsonReader;
-import com.yandex.disk.client.Credentials;
-import com.yandex.disk.client.TransportClient;
 
 import javax.swing.*;
 import java.awt.*;
@@ -43,15 +41,14 @@ public class AuthForm extends  JFrame{
            setLayout(new GridBagLayout());
            codeAuth = new JTextField[3];
            authdbx("dropbox", dbxurl);
-           authdbx("google", "http://www.google.com");
+           //authdbx("google", "http://www.google.com");
            authdbx("yandex", yandexurl);
 
            JButton saveButton = new JButton("Save codes");
            saveButton.addActionListener(new ActionListener() {
                public void actionPerformed(ActionEvent e) {
                    String dbxcode = codeAuth[0].getText();
-                   String gdrivecode = codeAuth[1].getText();
-                   String ydiskcode = codeAuth[2].getText();
+                   String ydiskcode = codeAuth[1].getText();
 
                    PrintWriter writer = null;
                    try {
@@ -62,7 +59,6 @@ public class AuthForm extends  JFrame{
                        e1.printStackTrace();
                    }
                    writer.println(dbxcode);
-                   writer.println(gdrivecode);
                    writer.println(ydiskcode);
                    writer.close();
                    try {
@@ -103,6 +99,7 @@ public class AuthForm extends  JFrame{
                    }
                    //setVisible(false);
                    try {
+                       System.out.println("HETE");
                        mainform = new MainFrame("JCS - multicloud system");
                    } catch (DbxException e1) {
                        e1.printStackTrace();
@@ -158,7 +155,7 @@ public class AuthForm extends  JFrame{
             });
         }
         codeAuth[anInty] = new JTextField("Enter an authorization code");
-        add(codeAuth[anInty],new GridBagConstraints(anIntx++, anInty, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+        add(codeAuth[anInty], new GridBagConstraints(anIntx++, anInty, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
         add(buttonAuth,new GridBagConstraints(anIntx, anInty++, 1, 1, 1, 1, GridBagConstraints.PAGE_START, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
         anIntx = 0;
     }

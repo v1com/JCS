@@ -70,12 +70,17 @@ public class MainFrame extends JFrame {
         projectPath = new File(".").getCanonicalPath();
         adp = "\\src\\main\\java\\com\\jcs";
         additionalPath = "\\src\\main\\java\\com\\jcs\\tokens.txt";
+        String pathAuthCodes = "\\src\\main\\java\\com\\jcs\\authcodes.txt";
         pathToAuthTokens = projectPath + additionalPath;
 
         FileReader r = new FileReader(pathToAuthTokens);
         BufferedReader b = new BufferedReader(r);
         dbtoken = b.readLine();
-        ydisktoken = "37835a456eb541e59916de10388a5150";
+        r.close();
+        FileReader r1 = new FileReader(projectPath + pathAuthCodes);
+        b = new BufferedReader(r1);
+        b.readLine();
+        ydisktoken = b.readLine();
 
         if (dbtoken == null) {
             auth = new AuthForm();
@@ -83,17 +88,17 @@ public class MainFrame extends JFrame {
             DbxRequestConfig config = new DbxRequestConfig(clientId, Locale.getDefault().toString());
             client = new DbxClientV2(config, dbtoken);
 
-            Credentials cr = new Credentials("nikitamslv",ydisktoken);
+            Credentials cr = new Credentials("name",ydisktoken);
 
             try {
-                clientUploadInstance = TransportClient.getUploadInstance(cr);/*создает объекты для загрузки файлов на Диск*/
+                clientUploadInstance = TransportClient.getUploadInstance(cr);/*пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ*/
             } catch (WebdavClientInitException e) {
                 e.printStackTrace();
             }
 
             try {
-                clientInstance = TransportClient.getInstance(cr);/*создаётся объект для работы
-            со всеми остальными функциями API*/
+                clientInstance = TransportClient.getInstance(cr);/*пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+            пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ API*/
             } catch (WebdavClientInitException e) {
                 e.printStackTrace();
             }
@@ -118,9 +123,9 @@ public class MainFrame extends JFrame {
                 listModel.addElement(item.getDisplayName());
             }
 
-            //client.files.delete("path"); удаление файлов
+            //client.files.delete("path"); пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 
-            //дизайн + дописать эти функции
+            //пїЅпїЅпїЅпїЅпїЅпїЅ + пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
 
             entries = client.files.listFolder("").entries;
@@ -144,11 +149,11 @@ public class MainFrame extends JFrame {
 
          //   getUpdateYandexFolders();
          //   loadFolderListYd();
-            // Скачивание файла из дропбокс
-           // OutputStream outStream = new FileOutputStream(new File(projectPath + adp + "/out.txt"));  // загрузка с дропбокса
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+           // OutputStream outStream = new FileOutputStream(new File(projectPath + adp + "/out.txt"));  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             //client.files.downloadBuilder(dir + "/gg.txt").run(outStream);
-            // dir + "/gg.txt" - откуда скачивать, или куда закачивать
-            // Загрузка файлв в дропбокс
+            // dir + "/gg.txt" - пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             /*
             InputStream inputStream = new FileInputStream(new File(projectPath + adp + "/gg.txt"));
             client.files.uploadBuilder(dir+"/gg.txt").run(inputStream);
@@ -249,7 +254,7 @@ public class MainFrame extends JFrame {
                         acceptDonwload = false;
                         ListModel lm = list.getModel();
                         path = lm.getElementAt(index).toString();
-                        boolean m = path.contains("."); // если в пути есть точка, значит это файл с расширением,а не папка
+                        boolean m = path.contains("."); // пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ,пїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
                         if (!m) {
                             try {
                                 getUpdateFolders(path);
@@ -338,7 +343,7 @@ public class MainFrame extends JFrame {
                     } else {
                         ListModel lm = list.getModel();
                         path = lm.getElementAt(index).toString();
-                        boolean m = path.contains("."); // если в пути есть точка, значит это файл с расширением,а не папка
+                        boolean m = path.contains("."); // пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ,пїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
                         if (!m) {
                             getUpdateYandexFolders(path);
                             currentPath = path;
@@ -358,6 +363,7 @@ public class MainFrame extends JFrame {
                             if (ret == JFileChooser.APPROVE_OPTION) {
                                 file = saveFile.getSelectedFile();
                                 pathToSave = file.getAbsolutePath();
+                                System.out.println(currentPath + "/" + lm.getElementAt(index).toString());
                             }
 
                             ProgressListener pl = new ProgressListener() {
@@ -499,7 +505,7 @@ public class MainFrame extends JFrame {
                 }
                 else if(currentDisk == 1){
                     try {
-                        clientInstance.makeFolder(currentPath + "/" + createFolderName);/*Создаёт католог в уже существующем катологе*/
+                        clientInstance.makeFolder(currentPath + "/" + createFolderName);/*пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ*/
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     } catch (DuplicateFolderException e1) {
